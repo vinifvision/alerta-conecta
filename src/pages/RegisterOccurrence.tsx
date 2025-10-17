@@ -56,7 +56,7 @@ const RegisterOccurrence: React.FC = () => {
             Registrar Ocorrência
           </h1>
           <div className="w-9 h-9" /> 
-        </div>  
+        </div>
 
         <form onSubmit={handleSubmit} className="max-w-[680px] mx-auto space-y-5">
           <div>

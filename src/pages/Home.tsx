@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Sidebar from "@/components/dashboard/Sidebar";
 import { Phone } from "lucide-react";
 
-// Definição de Tipos
+// --- Definição de Tipos ---
 type Occurrence = {
   id: number;
   address: string;
@@ -17,125 +17,152 @@ type User = {
   photoUrl: string;
 };
 
+// --- Tipos para os Filtros ---
+type FilterOption = {
+  value: string;
+  label: string;
+};
+
+type HomeFilterOptionsData = {
+  periods: FilterOption[];
+  types: FilterOption[];
+  regions: FilterOption[];
+  statuses: FilterOption[];
+};
+
+type HomeFilterState = {
+  period: string;
+  type: string;
+  region: string;
+  status: string;
+};
+
 const Home = () => {
-  // Estados para as Ocorrências
+  // --- Estados para os Dados ---
   const [recentOccurrences, setRecentOccurrences] = useState<Occurrence[]>([]);
   const [inProgressOccurrences, setInProgressOccurrences] = useState<Occurrence[]>([]);
   const [completedOccurrences, setCompletedOccurrences] = useState<Occurrence[]>([]);
-
-  // Estado para as Informações do Usuário (Virão do Login/Banco de Dados)
   const [user, setUser] = useState<User | null>(null);
 
-  // Estados para os filtros
-  const [filters, setFilters] = useState({
-    period: '',
-    type: '',
-    region: '',
-    status: ''
+  // --- Estado de Carregamento ---
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Estado para os filtros selecionados
+  const [filters, setFilters] = useState<HomeFilterState>({
+    period: "",
+    type: "",
+    region: "",
+    status: "",
   });
 
+  // --- Estado para as opções dos filtros ---
+  const [filterOptions, setFilterOptions] = useState<HomeFilterOptionsData>({
+    periods: [],
+    types: [],
+    regions: [],
+    statuses: [],
+  });
+
+  const navigate = useNavigate();
+
+  // --- useEffect para carregar TODOS os dados ---
   useEffect(() => {
     // ----------------------------------------------------
-    // LÓGICA DE BUSCA DO USUÁRIO (SIMULAÇÃO DE BACKEND)
-    // 
-    // OBS: Substitua este bloco pela sua chamada API real
-    // para o endpoint do Spring Boot após o login.
+    // LÓGICA DE BUSCA DE DADOS (SIMULAÇÃO DE BACKEND)
     // ----------------------------------------------------
-    const fetchUserData = () => {
-      // Dados que viriam do banco de dados/contexto de login
-      const fetchedUser: User = {
+    const fetchHomePageData = () => {
+      // 1. Mock do Usuário
+      const mockUser: User = {
         name: "Roberto Silva",
         role: "Despachante",
-        photoUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Roberto"
+        photoUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Roberto",
       };
 
-      // Simula o tempo de uma requisição de rede
+      // 2. Mock das Ocorrências
+      const mockOccurrences: Occurrence[] = [
+        { id: 1, address: "Rua do Sossego, 123 - Centro", title: "Incêndio em Edificação", status: "active" },
+        { id: 2, address: "Av. Boa Viagem, 456 - Zona Sul", title: "Acidente Veicular", status: "in_progress" },
+        { id: 3, address: "Rua da Aurora, 789 - Centro", title: "APH - Atendimento Pré-Hospitalar", status: "completed" },
+        { id: 4, address: "Praça da República, 321 - Centro", title: "Incêndio Florestal", status: "active" },
+        { id: 5, address: "Rua da Concórdia, 100 - Zona Norte", title: "Resgate em Altura", status: "in_progress" },
+        { id: 6, address: "Av. Norte, 200 - Zona Norte", title: "Salvamento Aquático", status: "completed" },
+        { id: 7, address: "Rua do Sol, 300 - Zona Oeste", title: "Incêndio em Veículo", status: "active" },
+        { id: 8, address: "Av. Recife, 400 - Zona Sul", title: "APH - Atendimento Pré-Hospitalar", status: "completed" },
+      ];
+
+      // 3. Mock das Opções de Filtro
+      const mockFilterOptions: HomeFilterOptionsData = {
+        periods: [
+          { value: "today", label: "Hoje" },
+          { value: "week", label: "Última semana" },
+          { value: "month", label: "Último mês" },
+          { value: "quarter", label: "Últimos 3 meses" },
+          { value: "year", label: "Último ano" },
+        ],
+        types: [
+          { value: "incendio", label: "Incêndio" },
+          { value: "acidente", label: "Acidente Veicular" },
+          { value: "aph", label: "APH - Atendimento Pré-Hospitalar" },
+          { value: "resgate", label: "Resgate em Altura" },
+          { value: "salvamento", label: "Salvamento Aquático" },
+          { value: "incendio_veiculo", label: "Incêndio em Veículo" },
+          { value: "incendio_florestal", label: "Incêndio Florestal" },
+          { value: "outros", label: "Outros" },
+        ],
+        regions: [
+          { value: "centro", label: "Centro" },
+          { value: "zona_sul", label: "Zona Sul" },
+          { value: "zona_norte", label: "Zona Norte" },
+          { value: "zona_oeste", label: "Zona Oeste" },
+          { value: "regiao_metropolitana", label: "Região Metropolitana" },
+        ],
+        statuses: [
+          { value: "active", label: "Aberta" },
+          { value: "in_progress", label: "Em andamento" },
+          { value: "completed", label: "Concluída" },
+          { value: "cancelled", label: "Cancelada" },
+        ],
+      };
+
+      // 4. Simula o tempo de uma requisição de rede
       setTimeout(() => {
-        setUser(fetchedUser);
-      }, 300); // 300ms de delay de simulação
+        // Define o usuário
+        setUser(mockUser);
+
+        // Filtra e define as ocorrências
+        const recent = mockOccurrences.filter((o) => o.status === "active");
+        const inProgress = mockOccurrences.filter((o) => o.status === "in_progress");
+        const completed = mockOccurrences.filter((o) => o.status === "completed");
+        setRecentOccurrences(recent);
+        setInProgressOccurrences(inProgress);
+        setCompletedOccurrences(completed);
+
+        // Define as opções de filtro
+        setFilterOptions(mockFilterOptions);
+
+        // Finaliza o carregamento
+        setIsLoading(false);
+      }, 500);
     };
 
-    fetchUserData();
-    // ----------------------------------------------------
+    fetchHomePageData();
+  }, [navigate]);
 
-    // Dados mock para demonstração das ocorrências
-    const mockData: Occurrence[] = [
-      {
-        id: 1,
-        address: "Rua do Sossego, 123 - Centro",
-        title: "Incêndio em Edificação",
-        status: "active"
-      },
-      {
-        id: 2,
-        address: "Av. Boa Viagem, 456 - Zona Sul",
-        title: "Acidente Veicular",
-        status: "in_progress"
-      },
-      {
-        id: 3,
-        address: "Rua da Aurora, 789 - Centro",
-        title: "APH - Atendimento Pré-Hospitalar",
-        status: "completed"
-      },
-      {
-        id: 4,
-        address: "Praça da República, 321 - Centro",
-        title: "Incêndio Florestal",
-        status: "active"
-      },
-      {
-        id: 5,
-        address: "Rua da Concórdia, 100 - Zona Norte",
-        title: "Resgate em Altura",
-        status: "in_progress"
-      },
-      {
-        id: 6,
-        address: "Av. Norte, 200 - Zona Norte",
-        title: "Salvamento Aquático",
-        status: "completed"
-      },
-      {
-        id: 7,
-        address: "Rua do Sol, 300 - Zona Oeste",
-        title: "Incêndio em Veículo",
-        status: "active"
-      },
-      {
-        id: 8,
-        address: "Av. Recife, 400 - Zona Sul",
-        title: "APH - Atendimento Pré-Hospitalar",
-        status: "completed"
-      }
-    ];
-
-    // Filtra as ocorrências por status
-    const recent = mockData.filter((o: Occurrence) => o.status === "active");
-    const inProgress = mockData.filter((o: Occurrence) => o.status === "in_progress");
-    const completed = mockData.filter((o: Occurrence) => o.status === "completed");
-
-    setRecentOccurrences(recent);
-    setInProgressOccurrences(inProgress);
-    setCompletedOccurrences(completed);
-  }, []);
-
-  // Exibe um estado de carregamento se o usuário ainda não foi carregado
-  if (!user) {
+  // --- Estado de carregamento ---
+  if (isLoading) {
     return (
       <div className="w-screen h-screen flex items-center justify-center bg-[#F9F9F9]">
-        <p className="text-[#1650A7] text-xl">Carregando informações do usuário...</p>
+        <p className="text-[#1650A7] text-xl">Carregando dados da home...</p>
       </div>
     );
   }
 
-  // Função para aplicar filtros
+  // --- Funções ---
   const applyFilters = () => {
     console.log('Filtros aplicados:', filters);
     alert('Filtros aplicados! (Funcionalidade será implementada)');
   };
 
-  // Função para limpar filtros
   const clearFilters = () => {
     setFilters({
       period: '',
@@ -159,6 +186,7 @@ const Home = () => {
     };
   });
 
+  // --- Componente de Card (AGORA COMPLETO) ---
   const OccurrenceCard = ({ title, address, id, status }: Occurrence) => {
     const occurrenceState = {
       id,
@@ -178,7 +206,7 @@ const Home = () => {
         <div className="flex-1">
           <div className="flex items-start gap-3">
             <div
-              className={`w-3 h-3 rounded-full mt-1.5 flex-shrink-0 ${status === "active" ? "bg-[#FF0000]" : "bg-[#FF0000]"
+              className={`w-3 h-3 rounded-full mt-1.5 flex-shrink-0 ${status === "active" ? "bg-[#FF0000]" : "bg-[#FF0000]" // Ambas as cores estão vermelhas, mantive como no seu original
                 }`}
             />
             <div>
@@ -201,6 +229,8 @@ const Home = () => {
     );
   };
 
+  // --- Renderização Principal ---
+  // (user! garante ao TypeScript que 'user' não é nulo aqui)
   return (
     <div className="w-screen h-screen flex overflow-hidden bg-[#F9F9F9] max-md:flex-col">
       <Sidebar />
@@ -209,8 +239,7 @@ const Home = () => {
         <div className="flex items-start justify-between mb-10 max-md:flex-col max-md:gap-4">
           <div>
             <h1 className="text-[#1650A7] text-[32px] font-semibold mb-2 max-md:text-2xl max-sm:text-xl">
-              {/* Usa o nome do usuário do estado */}
-              Olá, {user.name},
+              Olá, {user!.name},
             </h1>
             <p className="text-[#1650A7] text-[32px] font-semibold max-md:text-2xl max-sm:text-xl">
               Acompanhe suas ocorrências
@@ -219,17 +248,13 @@ const Home = () => {
 
           <Link to="/profile" className="flex items-center gap-4 max-md:self-end">
             <div className="text-right">
-              {/* Usa o nome do usuário do estado */}
-              <p className="text-[#000000] text-base font-semibold">{user.name}</p>
-              {/* Usa o cargo do estado */}
-              <p className="text-[#666666] text-sm">{user.role}</p>
+              <p className="text-[#000000] text-base font-semibold">{user!.name}</p>
+              <p className="text-[#666666] text-sm">{user!.role}</p>
             </div>
             <div className="w-[60px] h-[60px] rounded-full bg-[#D9D9D9] overflow-hidden">
               <img
-                // Usa a URL da foto do estado
-                src={user.photoUrl}
-                // Usa o nome do usuário do estado
-                alt={user.name}
+                src={user!.photoUrl}
+                alt={user!.name}
                 className="w-full h-full object-cover"
               />
             </div>
@@ -269,6 +294,7 @@ const Home = () => {
                 Filtrar Ocorrências
               </h3>
 
+              {/* --- Filtros Dinâmicos --- */}
               <div className="space-y-4">
                 <select
                   className="w-full h-12 px-4 bg-[#F6F6F6] border border-[rgba(0,0,0,0.14)] rounded-lg text-base"
@@ -276,11 +302,11 @@ const Home = () => {
                   onChange={(e) => setFilters({ ...filters, period: e.target.value })}
                 >
                   <option value="">Período</option>
-                  <option value="today">Hoje</option>
-                  <option value="week">Última semana</option>
-                  <option value="month">Último mês</option>
-                  <option value="quarter">Últimos 3 meses</option>
-                  <option value="year">Último ano</option>
+                  {filterOptions.periods.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
 
                 <select
@@ -289,14 +315,11 @@ const Home = () => {
                   onChange={(e) => setFilters({ ...filters, type: e.target.value })}
                 >
                   <option value="">Tipo de ocorrência</option>
-                  <option value="incendio">Incêndio</option>
-                  <option value="acidente">Acidente Veicular</option>
-                  <option value="aph">APH - Atendimento Pré-Hospitalar</option>
-                  <option value="resgate">Resgate em Altura</option>
-                  <option value="salvamento">Salvamento Aquático</option>
-                  <option value="incendio_veiculo">Incêndio em Veículo</option>
-                  <option value="incendio_florestal">Incêndio Florestal</option>
-                  <option value="outros">Outros</option>
+                  {filterOptions.types.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
 
                 <select
@@ -305,11 +328,11 @@ const Home = () => {
                   onChange={(e) => setFilters({ ...filters, region: e.target.value })}
                 >
                   <option value="">Região</option>
-                  <option value="centro">Centro</option>
-                  <option value="zona_sul">Zona Sul</option>
-                  <option value="zona_norte">Zona Norte</option>
-                  <option value="zona_oeste">Zona Oeste</option>
-                  <option value="regiao_metropolitana">Região Metropolitana</option>
+                  {filterOptions.regions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
 
                 <select
@@ -318,10 +341,11 @@ const Home = () => {
                   onChange={(e) => setFilters({ ...filters, status: e.target.value })}
                 >
                   <option value="">Status</option>
-                  <option value="active">Aberta</option>
-                  <option value="in_progress">Em andamento</option>
-                  <option value="completed">Concluída</option>
-                  <option value="cancelled">Cancelada</option>
+                  {filterOptions.statuses.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
 
                 <div className="flex gap-2">

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import Sidebar from "@/components/dashboard/Sidebar";
 import { Phone } from "lucide-react";
 
+// Definição de Tipos
 type Occurrence = {
   id: number;
   address: string;
@@ -10,11 +11,21 @@ type Occurrence = {
   status: "active" | "in_progress" | "completed";
 };
 
+type User = {
+  name: string;
+  role: string;
+  photoUrl: string;
+};
+
 const Home = () => {
+  // Estados para as Ocorrências
   const [recentOccurrences, setRecentOccurrences] = useState<Occurrence[]>([]);
   const [inProgressOccurrences, setInProgressOccurrences] = useState<Occurrence[]>([]);
   const [completedOccurrences, setCompletedOccurrences] = useState<Occurrence[]>([]);
-  
+
+  // Estado para as Informações do Usuário (Virão do Login/Banco de Dados)
+  const [user, setUser] = useState<User | null>(null);
+
   // Estados para os filtros
   const [filters, setFilters] = useState({
     period: '',
@@ -24,7 +35,30 @@ const Home = () => {
   });
 
   useEffect(() => {
-    // Dados mock para demonstração
+    // ----------------------------------------------------
+    // LÓGICA DE BUSCA DO USUÁRIO (SIMULAÇÃO DE BACKEND)
+    // 
+    // OBS: Substitua este bloco pela sua chamada API real
+    // para o endpoint do Spring Boot após o login.
+    // ----------------------------------------------------
+    const fetchUserData = () => {
+      // Dados que viriam do banco de dados/contexto de login
+      const fetchedUser: User = {
+        name: "Roberto Silva",
+        role: "Despachante",
+        photoUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Roberto"
+      };
+
+      // Simula o tempo de uma requisição de rede
+      setTimeout(() => {
+        setUser(fetchedUser);
+      }, 300); // 300ms de delay de simulação
+    };
+
+    fetchUserData();
+    // ----------------------------------------------------
+
+    // Dados mock para demonstração das ocorrências
     const mockData: Occurrence[] = [
       {
         id: 1,
@@ -86,10 +120,17 @@ const Home = () => {
     setCompletedOccurrences(completed);
   }, []);
 
+  // Exibe um estado de carregamento se o usuário ainda não foi carregado
+  if (!user) {
+    return (
+      <div className="w-screen h-screen flex items-center justify-center bg-[#F9F9F9]">
+        <p className="text-[#1650A7] text-xl">Carregando informações do usuário...</p>
+      </div>
+    );
+  }
+
   // Função para aplicar filtros
   const applyFilters = () => {
-    // Aqui você implementaria a lógica de filtro real
-    // Por enquanto, apenas mostra um alerta
     console.log('Filtros aplicados:', filters);
     alert('Filtros aplicados! (Funcionalidade será implementada)');
   };
@@ -168,7 +209,8 @@ const Home = () => {
         <div className="flex items-start justify-between mb-10 max-md:flex-col max-md:gap-4">
           <div>
             <h1 className="text-[#1650A7] text-[32px] font-semibold mb-2 max-md:text-2xl max-sm:text-xl">
-              Olá, Roberto Silva,
+              {/* Usa o nome do usuário do estado */}
+              Olá, {user.name},
             </h1>
             <p className="text-[#1650A7] text-[32px] font-semibold max-md:text-2xl max-sm:text-xl">
               Acompanhe suas ocorrências
@@ -177,13 +219,17 @@ const Home = () => {
 
           <Link to="/profile" className="flex items-center gap-4 max-md:self-end">
             <div className="text-right">
-              <p className="text-[#000000] text-base font-semibold">Roberto Silva</p>
-              <p className="text-[#666666] text-sm">Despachante</p>
+              {/* Usa o nome do usuário do estado */}
+              <p className="text-[#000000] text-base font-semibold">{user.name}</p>
+              {/* Usa o cargo do estado */}
+              <p className="text-[#666666] text-sm">{user.role}</p>
             </div>
             <div className="w-[60px] h-[60px] rounded-full bg-[#D9D9D9] overflow-hidden">
               <img
-                src="https://api.dicebear.com/7.x/avataaars/svg?seed=Roberto"
-                alt="Roberto Silva"
+                // Usa a URL da foto do estado
+                src={user.photoUrl}
+                // Usa o nome do usuário do estado
+                alt={user.name}
                 className="w-full h-full object-cover"
               />
             </div>
@@ -224,10 +270,10 @@ const Home = () => {
               </h3>
 
               <div className="space-y-4">
-                <select 
+                <select
                   className="w-full h-12 px-4 bg-[#F6F6F6] border border-[rgba(0,0,0,0.14)] rounded-lg text-base"
                   value={filters.period}
-                  onChange={(e) => setFilters({...filters, period: e.target.value})}
+                  onChange={(e) => setFilters({ ...filters, period: e.target.value })}
                 >
                   <option value="">Período</option>
                   <option value="today">Hoje</option>
@@ -237,10 +283,10 @@ const Home = () => {
                   <option value="year">Último ano</option>
                 </select>
 
-                <select 
+                <select
                   className="w-full h-12 px-4 bg-[#F6F6F6] border border-[rgba(0,0,0,0.14)] rounded-lg text-base"
                   value={filters.type}
-                  onChange={(e) => setFilters({...filters, type: e.target.value})}
+                  onChange={(e) => setFilters({ ...filters, type: e.target.value })}
                 >
                   <option value="">Tipo de ocorrência</option>
                   <option value="incendio">Incêndio</option>
@@ -253,10 +299,10 @@ const Home = () => {
                   <option value="outros">Outros</option>
                 </select>
 
-                <select 
+                <select
                   className="w-full h-12 px-4 bg-[#F6F6F6] border border-[rgba(0,0,0,0.14)] rounded-lg text-base"
                   value={filters.region}
-                  onChange={(e) => setFilters({...filters, region: e.target.value})}
+                  onChange={(e) => setFilters({ ...filters, region: e.target.value })}
                 >
                   <option value="">Região</option>
                   <option value="centro">Centro</option>
@@ -266,10 +312,10 @@ const Home = () => {
                   <option value="regiao_metropolitana">Região Metropolitana</option>
                 </select>
 
-                <select 
+                <select
                   className="w-full h-12 px-4 bg-[#F6F6F6] border border-[rgba(0,0,0,0.14)] rounded-lg text-base"
                   value={filters.status}
-                  onChange={(e) => setFilters({...filters, status: e.target.value})}
+                  onChange={(e) => setFilters({ ...filters, status: e.target.value })}
                 >
                   <option value="">Status</option>
                   <option value="active">Aberta</option>
@@ -279,13 +325,13 @@ const Home = () => {
                 </select>
 
                 <div className="flex gap-2">
-                  <button 
+                  <button
                     onClick={applyFilters}
                     className="flex-1 h-12 bg-[#1650A7] text-white rounded-lg font-medium hover:bg-[#0f3d7f] transition-colors"
                   >
                     Filtrar
                   </button>
-                  <button 
+                  <button
                     onClick={clearFilters}
                     className="flex-1 h-12 bg-gray-500 text-white rounded-lg font-medium hover:bg-gray-600 transition-colors"
                   >

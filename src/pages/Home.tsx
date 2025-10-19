@@ -14,33 +14,65 @@ const Home = () => {
   const [recentOccurrences, setRecentOccurrences] = useState<Occurrence[]>([]);
   const [inProgressOccurrences, setInProgressOccurrences] = useState<Occurrence[]>([]);
   const [completedOccurrences, setCompletedOccurrences] = useState<Occurrence[]>([]);
+  
+  // Estados para os filtros
+  const [filters, setFilters] = useState({
+    period: '',
+    type: '',
+    region: '',
+    status: ''
+  });
 
   useEffect(() => {
     // Dados mock para demonstração
     const mockData: Occurrence[] = [
       {
         id: 1,
-        address: "Rua do Sossego, 123 - Recife",
+        address: "Rua do Sossego, 123 - Centro",
         title: "Incêndio em Edificação",
         status: "active"
       },
       {
         id: 2,
-        address: "Av. Boa Viagem, 456 - Recife",
+        address: "Av. Boa Viagem, 456 - Zona Sul",
         title: "Acidente Veicular",
         status: "in_progress"
       },
       {
         id: 3,
-        address: "Rua da Aurora, 789 - Recife",
+        address: "Rua da Aurora, 789 - Centro",
         title: "APH - Atendimento Pré-Hospitalar",
         status: "completed"
       },
       {
         id: 4,
-        address: "Praça da República, 321 - Recife",
+        address: "Praça da República, 321 - Centro",
         title: "Incêndio Florestal",
         status: "active"
+      },
+      {
+        id: 5,
+        address: "Rua da Concórdia, 100 - Zona Norte",
+        title: "Resgate em Altura",
+        status: "in_progress"
+      },
+      {
+        id: 6,
+        address: "Av. Norte, 200 - Zona Norte",
+        title: "Salvamento Aquático",
+        status: "completed"
+      },
+      {
+        id: 7,
+        address: "Rua do Sol, 300 - Zona Oeste",
+        title: "Incêndio em Veículo",
+        status: "active"
+      },
+      {
+        id: 8,
+        address: "Av. Recife, 400 - Zona Sul",
+        title: "APH - Atendimento Pré-Hospitalar",
+        status: "completed"
       }
     ];
 
@@ -53,6 +85,24 @@ const Home = () => {
     setInProgressOccurrences(inProgress);
     setCompletedOccurrences(completed);
   }, []);
+
+  // Função para aplicar filtros
+  const applyFilters = () => {
+    // Aqui você implementaria a lógica de filtro real
+    // Por enquanto, apenas mostra um alerta
+    console.log('Filtros aplicados:', filters);
+    alert('Filtros aplicados! (Funcionalidade será implementada)');
+  };
+
+  // Função para limpar filtros
+  const clearFilters = () => {
+    setFilters({
+      period: '',
+      type: '',
+      region: '',
+      status: ''
+    });
+  };
 
   const latestMapped = [
     ...recentOccurrences,
@@ -174,25 +224,74 @@ const Home = () => {
               </h3>
 
               <div className="space-y-4">
-                <select className="w-full h-12 px-4 bg-[#F6F6F6] border border-[rgba(0,0,0,0.14)] rounded-lg text-base">
-                  <option>Período</option>
+                <select 
+                  className="w-full h-12 px-4 bg-[#F6F6F6] border border-[rgba(0,0,0,0.14)] rounded-lg text-base"
+                  value={filters.period}
+                  onChange={(e) => setFilters({...filters, period: e.target.value})}
+                >
+                  <option value="">Período</option>
+                  <option value="today">Hoje</option>
+                  <option value="week">Última semana</option>
+                  <option value="month">Último mês</option>
+                  <option value="quarter">Últimos 3 meses</option>
+                  <option value="year">Último ano</option>
                 </select>
 
-                <select className="w-full h-12 px-4 bg-[#F6F6F6] border border-[rgba(0,0,0,0.14)] rounded-lg text-base">
-                  <option>Tipo de ocorrência</option>
+                <select 
+                  className="w-full h-12 px-4 bg-[#F6F6F6] border border-[rgba(0,0,0,0.14)] rounded-lg text-base"
+                  value={filters.type}
+                  onChange={(e) => setFilters({...filters, type: e.target.value})}
+                >
+                  <option value="">Tipo de ocorrência</option>
+                  <option value="incendio">Incêndio</option>
+                  <option value="acidente">Acidente Veicular</option>
+                  <option value="aph">APH - Atendimento Pré-Hospitalar</option>
+                  <option value="resgate">Resgate em Altura</option>
+                  <option value="salvamento">Salvamento Aquático</option>
+                  <option value="incendio_veiculo">Incêndio em Veículo</option>
+                  <option value="incendio_florestal">Incêndio Florestal</option>
+                  <option value="outros">Outros</option>
                 </select>
 
-                <select className="w-full h-12 px-4 bg-[#F6F6F6] border border-[rgba(0,0,0,0.14)] rounded-lg text-base">
-                  <option>Região</option>
+                <select 
+                  className="w-full h-12 px-4 bg-[#F6F6F6] border border-[rgba(0,0,0,0.14)] rounded-lg text-base"
+                  value={filters.region}
+                  onChange={(e) => setFilters({...filters, region: e.target.value})}
+                >
+                  <option value="">Região</option>
+                  <option value="centro">Centro</option>
+                  <option value="zona_sul">Zona Sul</option>
+                  <option value="zona_norte">Zona Norte</option>
+                  <option value="zona_oeste">Zona Oeste</option>
+                  <option value="regiao_metropolitana">Região Metropolitana</option>
                 </select>
 
-                <select className="w-full h-12 px-4 bg-[#F6F6F6] border border-[rgba(0,0,0,0.14)] rounded-lg text-base">
-                  <option>Status</option>
+                <select 
+                  className="w-full h-12 px-4 bg-[#F6F6F6] border border-[rgba(0,0,0,0.14)] rounded-lg text-base"
+                  value={filters.status}
+                  onChange={(e) => setFilters({...filters, status: e.target.value})}
+                >
+                  <option value="">Status</option>
+                  <option value="active">Aberta</option>
+                  <option value="in_progress">Em andamento</option>
+                  <option value="completed">Concluída</option>
+                  <option value="cancelled">Cancelada</option>
                 </select>
 
-                <button className="w-full h-12 bg-[#1650A7] text-white rounded-lg font-medium hover:bg-[#0f3d7f] transition-colors">
-                  Filtrar
-                </button>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={applyFilters}
+                    className="flex-1 h-12 bg-[#1650A7] text-white rounded-lg font-medium hover:bg-[#0f3d7f] transition-colors"
+                  >
+                    Filtrar
+                  </button>
+                  <button 
+                    onClick={clearFilters}
+                    className="flex-1 h-12 bg-gray-500 text-white rounded-lg font-medium hover:bg-gray-600 transition-colors"
+                  >
+                    Limpar
+                  </button>
+                </div>
               </div>
             </div>
 

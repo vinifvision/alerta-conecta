@@ -37,7 +37,7 @@ export default function OccurrenceDetails() {
     );
   }
 
-  const lat = occ.lat ?? -8.04666;     // placeholder Recife
+  const lat = occ.lat ?? -8.04666;
   const lng = occ.lng ?? -34.8770;
   const mediaUrl =
     occ.mediaUrl ??
@@ -128,8 +128,8 @@ export default function OccurrenceDetails() {
             <div className="p-4 rounded-lg border">
               <p className="text-xs text-muted-foreground">Data e hora</p>
               <p className="font-medium mt-1">
-                {new Date(occ.created_at ?? Date.now()).toLocaleDateString()} •{" "}
-                {new Date(occ.created_at ?? Date.now()).toLocaleTimeString([], {
+                {new Date(occ.created_at ?? new Date().toISOString()).toLocaleDateString()} •{" "}
+                {new Date(occ.created_at ?? new Date().toISOString()).toLocaleTimeString([], {
                   hour: "2-digit",
                   minute: "2-digit",
                 })}

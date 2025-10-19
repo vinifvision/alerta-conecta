@@ -38,8 +38,8 @@ const MOCK_LOGS: LogItem[] = Array.from({ length: 120 }).map((_, i) => {
       i % 5 === 0
         ? "Alterou status para 'Atendida'"
         : i % 3 === 0
-        ? "Incluiu novo registro"
-        : "Acesso ao painel operacional",
+          ? "Incluiu novo registro"
+          : "Acesso ao painel operacional",
     ip: `10.0.${Math.floor(i / 10)}.${(i % 10) + 10}`,
   };
 });
@@ -70,7 +70,7 @@ const toCSV = (rows: LogItem[]) => {
   return [header.join(";"), ...body].join("\n");
 };
 const AuditLogs: React.FC = () => {
-  
+
   const [user, setUser] = useState<string>("Todos");
   const [action, setAction] = useState<string>("Todas");
   const [module, setModule] = useState<string>("Todos");
@@ -121,7 +121,7 @@ const AuditLogs: React.FC = () => {
     const deletes = filtered.filter((r) => r.action === "Excluiu").length;
     const activeUsers = new Set(
       filtered
-        .filter((r) => Date.now() - new Date(r.timestamp).getTime() < 1000 * 60 * 60 * 24)
+        .filter((r) => new Date(r.timestamp).getTime() > new Date().getTime() - 1000 * 60 * 60 * 24)
         .map((r) => r.user)
     ).size;
     return { logins, edits, deletes, activeUsers };
@@ -217,7 +217,7 @@ const AuditLogs: React.FC = () => {
               <p className="text-sm text-gray-600">Exclusões</p>
               <p className="text-2xl font-bold text-[#0b2561] mt-1">{metrics.deletes}</p>
             </div>
-              <Trash2 className="w-8 h-8 text-[#1650A7]" />
+            <Trash2 className="w-8 h-8 text-[#1650A7]" />
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-center justify-between">

@@ -9,9 +9,8 @@ const Login = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-  
     if (username === "admin" && password === "1234") {
-     navigate("/home");
+      navigate("/home");
     } else {
       alert("Usuário ou senha incorretos!");
     }

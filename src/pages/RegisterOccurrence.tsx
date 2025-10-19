@@ -36,7 +36,9 @@ const RegisterOccurrence: React.FC = () => {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-   
+    // Aqui você pode adicionar a lógica para salvar a ocorrência
+    console.log("Dados da ocorrência:", form);
+    
     navigate("/home");
   }
 

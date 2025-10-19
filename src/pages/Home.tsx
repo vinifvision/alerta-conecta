@@ -1,37 +1,76 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Sidebar from "@/components/dashboard/Sidebar";
 import { Phone } from "lucide-react";
 
+type Occurrence = {
+  id: number;
+  address: string;
+  title: string;
+  status: "active" | "in_progress" | "completed";
+};
+
 const Home = () => {
-  const recentOccurrences = [
-    { title: "Butijão de gás", address: "Rua 43, N 434, Casa Azul", id: "#123456", status: "active" },
-    { title: "Sinistro de trânsito", address: "Av. Visconde de Suassuna, N 555", id: "#678910", status: "active" },
-  ];
+  const [recentOccurrences, setRecentOccurrences] = useState<Occurrence[]>([]);
+  const [inProgressOccurrences, setInProgressOccurrences] = useState<Occurrence[]>([]);
+  const [completedOccurrences, setCompletedOccurrences] = useState<Occurrence[]>([]);
 
-  const inProgressOccurrences = [
-    { title: "Protesto", address: "Av. Agamenon Magalhães, N...", id: "#1212134", status: "active" },
-  ];
+  useEffect(() => {
+    // Dados mock para demonstração
+    const mockData: Occurrence[] = [
+      {
+        id: 1,
+        address: "Rua do Sossego, 123 - Recife",
+        title: "Incêndio em Edificação",
+        status: "active"
+      },
+      {
+        id: 2,
+        address: "Av. Boa Viagem, 456 - Recife",
+        title: "Acidente Veicular",
+        status: "in_progress"
+      },
+      {
+        id: 3,
+        address: "Rua da Aurora, 789 - Recife",
+        title: "APH - Atendimento Pré-Hospitalar",
+        status: "completed"
+      },
+      {
+        id: 4,
+        address: "Praça da República, 321 - Recife",
+        title: "Incêndio Florestal",
+        status: "active"
+      }
+    ];
 
-  const completedOccurrences = [
-    { title: "Incêndio em residência", address: "Rua do Quintal, N 647", id: "#242424", status: "completed" },
-  ];
+    // Filtra as ocorrências por status
+    const recent = mockData.filter((o: Occurrence) => o.status === "active");
+    const inProgress = mockData.filter((o: Occurrence) => o.status === "in_progress");
+    const completed = mockData.filter((o: Occurrence) => o.status === "completed");
 
-  const latestMapped = [...recentOccurrences, ...inProgressOccurrences, ...completedOccurrences].map((o) => {
-    const numericId = Number(String(o.id).replace("#", ""));
+    setRecentOccurrences(recent);
+    setInProgressOccurrences(inProgress);
+    setCompletedOccurrences(completed);
+  }, []);
+
+  const latestMapped = [
+    ...recentOccurrences,
+    ...inProgressOccurrences,
+    ...completedOccurrences,
+  ].map((o) => {
     return {
-      id: numericId,
+      id: o.id,
       address: o.address,
       type: o.title,
       subtype: o.title,
       status: o.status === "active" ? "ABERTA" : "FINALIZADA",
     };
-    });
+  });
 
-  const OccurrenceCard = ({ title, address, id, status }: any) => {
-    const numericId = Number(String(id).replace("#", ""));
+  const OccurrenceCard = ({ title, address, id, status }: Occurrence) => {
     const occurrenceState = {
-      id: numericId,
+      id,
       address,
       type: title,
       subtype: title,
@@ -48,20 +87,19 @@ const Home = () => {
         <div className="flex-1">
           <div className="flex items-start gap-3">
             <div
-              className={`w-3 h-3 rounded-full mt-1.5 flex-shrink-0 ${
-                status === "active" ? "bg-[#FF0000]" : "bg-[#FF0000]"
-              }`}
+              className={`w-3 h-3 rounded-full mt-1.5 flex-shrink-0 ${status === "active" ? "bg-[#FF0000]" : "bg-[#FF0000]"
+                }`}
             />
             <div>
               <h3 className="text-[#000000] text-lg font-semibold mb-1">{title}</h3>
               <p className="text-[#666666] text-sm mb-2">{address}</p>
-              <p className="text-[#FF0000] text-sm font-medium">{id}</p>
+              <p className="text-[#FF0000] text-sm font-medium">#{id}</p>
             </div>
           </div>
         </div>
 
         <Link
-          to={`/occurrences/${numericId}`}
+          to={`/occurrences/${id}`}
           state={{ occurrence: occurrenceState, latest: latestMapped }}
           className="text-[#1650A7] text-sm font-medium hover:underline"
           title="Visualizar detalhes da ocorrência"
@@ -87,7 +125,6 @@ const Home = () => {
             </p>
           </div>
 
-          {/* Perfil clicável → /profile */}
           <Link to="/profile" className="flex items-center gap-4 max-md:self-end">
             <div className="text-right">
               <p className="text-[#000000] text-base font-semibold">Roberto Silva</p>
@@ -110,22 +147,22 @@ const Home = () => {
             </h2>
 
             <section className="mb-8">
-              {recentOccurrences.map((occurrence, index) => (
-                <OccurrenceCard key={index} {...occurrence} />
+              {recentOccurrences.map((o, index) => (
+                <OccurrenceCard key={index} {...o} />
               ))}
             </section>
 
             <h3 className="text-[#1650A7] text-xl font-semibold mb-4">Em andamento</h3>
             <section className="mb-8">
-              {inProgressOccurrences.map((occurrence, index) => (
-                <OccurrenceCard key={index} {...occurrence} />
+              {inProgressOccurrences.map((o, index) => (
+                <OccurrenceCard key={index} {...o} />
               ))}
             </section>
 
             <h3 className="text-[#1650A7] text-xl font-semibold mb-4">Concluídas</h3>
             <section>
-              {completedOccurrences.map((occurrence, index) => (
-                <OccurrenceCard key={index} {...occurrence} />
+              {completedOccurrences.map((o, index) => (
+                <OccurrenceCard key={index} {...o} />
               ))}
             </section>
           </div>

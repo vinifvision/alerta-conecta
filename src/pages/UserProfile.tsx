@@ -2,9 +2,6 @@ import React, { useState, useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
-// URL do endpoint do Spring Boot para buscar o perfil do usuário
-const PROFILE_API_URL = "http://localhost:8080/api/profile";
-
 type User = {
   name: string;
   role: string;
@@ -13,86 +10,77 @@ type User = {
   phone: string;
   email: string;
   avatarUrl: string;
+  cpf: string;
 };
 
 const UserProfile: React.FC = () => {
   const navigate = useNavigate();
 
-  // Estado inicial é null para indicar que os dados ainda não foram carregados
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // useEffect para buscar os dados do usuário
+  // useEffect para carregar os dados do localStorage
   useEffect(() => {
-    const fetchUserProfile = async () => {
-      const authToken = localStorage.getItem("authToken");
 
-      if (!authToken) {
-        // Se não houver token, redireciona para o login
-        navigate("/");
-        return;
-      }
+    // 1. Proteção de Rota
+    const authToken = localStorage.getItem("authToken");
+    if (!authToken) {
+      navigate("/");
+      return;
+    }
 
-      try {
-        const response = await fetch(PROFILE_API_URL, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            // Envia o Token JWT para o Spring Security validar
-            "Authorization": `Bearer ${authToken}`,
-          },
-        });
+    // 2. Buscar Dados do localStorage
+    const userDataString = localStorage.getItem("usuario");
+    if (!userDataString) {
+      setError("Dados do usuário não encontrados no localStorage.");
+      localStorage.removeItem("authToken");
+      navigate("/");
+      return;
+    }
 
-        if (!response.ok) {
-          // Se o token for inválido (401) ou outros erros
-          const errorData = await response.json();
-          throw new Error(errorData.message || "Falha ao carregar o perfil. Autenticação inválida.");
-        }
+    // 3. Montar o Objeto User
+    try {
+      const data = JSON.parse(userDataString); // O JSON salvo pelo Login
 
-        const data = await response.json();
+      const profileUser: User = {
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        registry: data.registry,
+        cpf: data.cpf,
+        role: data.role, // <--- ATUALIZADO: Lendo o 'role' vindo do backend
 
-        // Mapeia os dados recebidos do Spring Boot para o tipo User do React
-        const fetchedUser: User = {
-          name: data.fullName,      // 💡 Adapte o nome do campo se necessário (ex: data.nomeCompleto)
-          role: data.role,          // 💡 Adapte o nome do campo se necessário
-          battalion: data.battalion,// 💡 Adapte o nome do campo se necessário
-          registry: data.registry,  // 💡 Adapte o nome do campo se necessário
-          phone: data.phone,        // 💡 Adapte o nome do campo se necessário
-          email: data.email,        // 💡 Adapte o nome do campo se necessário
-          // O Spring Boot pode retornar a URL, ou você a gera no front.
-          avatarUrl: data.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.fullName.split(' ')[0]}`,
-        };
+        // (Valor Padrão caso o backend não mande)
+        battalion: data.battalion || "1º Batalhão de Incêndio",
+        avatarUrl: data.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.name.split(' ')[0]}`,
+      };
 
-        setUser(fetchedUser);
+      setUser(profileUser);
 
-      } catch (err) {
-        console.error("Erro ao buscar perfil:", err);
-        setError("Não foi possível carregar os dados do perfil.");
-        // Opcional: Em caso de erro grave, desloga
-        localStorage.removeItem("authToken");
-        navigate("/");
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    } catch (err) {
+      console.error("Erro ao processar dados do usuário:", err);
+      setError("Erro ao processar os dados do usuário.");
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("usuario");
+      navigate("/");
+    } finally {
+      setIsLoading(false);
+    }
 
-    fetchUserProfile();
-  }, [navigate]); // Dependência em navigate para o linter
+  }, [navigate]);
 
   const handleResetPassword = () => {
-    // Aqui seria uma chamada API para o Spring Boot solicitar a redefinição de senha por e-mail
     alert("Link de redefinição de senha enviado para o e-mail (Funcionalidade de backend a ser implementada).");
   };
 
   const handleLogout = () => {
-    // Remove o token de autenticação e redireciona
     localStorage.removeItem("authToken");
+    localStorage.removeItem("usuario");
     navigate("/");
   };
 
   // --- Condicionais de Carregamento e Erro ---
-
   if (isLoading) {
     return (
       <div className="w-screen h-screen flex items-center justify-center bg-[#F9F9F9]">
@@ -115,7 +103,6 @@ const UserProfile: React.FC = () => {
     );
   }
 
-  // user é garantidamente não-null neste ponto
   const currentUser = user as User;
 
   return (
@@ -133,7 +120,7 @@ const UserProfile: React.FC = () => {
           <div className="w-9 h-9" />
         </div>
 
-        {/* Informações do Usuário (usando os dados carregados) */}
+        {/* Informações do Usuário (usando os dados carregados do localStorage) */}
         <section className="max-w-[640px] mx-auto flex flex-col items-center mb-6">
           <div className="w-24 h-24 rounded-full overflow-hidden ring-2 ring-white shadow">
             <img
@@ -143,16 +130,18 @@ const UserProfile: React.FC = () => {
             />
           </div>
           <h2 className="mt-3 text-[#000] font-semibold">{currentUser.name}</h2>
+          {/* --- ATUALIZADO --- */}
           <p className="text-[#666] text-sm -mt-[2px]">{currentUser.role}</p>
         </section>
 
-        {/* Formulário de Detalhes (usando os dados carregados) */}
+        {/* Formulário de Detalhes (usando os dados carregados do localStorage) */}
         <form
           onSubmit={(e) => e.preventDefault()}
           className="max-w-[640px] mx-auto space-y-4"
         >
           <div>
             <label className="block text-sm font-medium mb-1">Cargo</label>
+            {/* --- ATUALIZADO --- */}
             <input
               value={currentUser.role}
               readOnly

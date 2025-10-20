@@ -1,50 +1,53 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-// URL do endpoint de login do seu Spring Boot. Adapte conforme necessário.
-const LOGIN_API_URL = "http://localhost:8080/api/auth/login";
-
-// CREDENCIAIS PROVISÓRIAS PARA TESTE
-const FALLBACK_CPF = "12345678900"; // CPF de teste (apenas números)
-const FALLBACK_PASSWORD = "senha_teste"; // Senha de teste
+// A URL da sua API de login
+// const LOGIN_API_URL = "";
 
 const Login = () => {
   const navigate = useNavigate();
   const [cpf, setCpf] = useState("");
-  const [password, setPassword] = useState("");
+  const [pass, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(""); // Limpa erros anteriores
-    setIsLoading(true); // Inicia o estado de carregamento
+    setError("");
+    setIsLoading(true);
 
-    // ----------------------------------------------------
-    // 1. TENTATIVA DE LOGIN REAL COM BACKEND SPRING BOOT
-    // ----------------------------------------------------
     try {
       const response = await fetch(LOGIN_API_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        // Envia o CPF e a senha no corpo da requisição
-        body: JSON.stringify({ cpf, password }),
+        body: JSON.stringify({ cpf, pass }),
       });
 
       // Se a resposta for OK (sucesso na API real)
       if (response.ok) {
-        const data = await response.json();
-        const authToken = data.token;
+        const data = await response.json(); // Objeto com status, name, email, etc.
 
-        if (authToken) {
-          localStorage.setItem("authToken", authToken);
+        // 1. Verificamos o 'status' que o backend enviou
+        if (data.status === "sucesso") {
+
+          // 2. Salvamos os dados do usuário
+          localStorage.setItem("usuario", JSON.stringify(data));
+
+          // 3. Salvamos um token (CRUCIAL para as outras páginas)
+          // Se o backend enviar um token real (data.token), usamos ele.
+          // Se não, usamos um token falso para o app não quebrar.
+          const tokenParaSalvar = data.token || "simulated_token_for_dev_12345";
+          localStorage.setItem("authToken", tokenParaSalvar);
+
+          // 4. Redirecionamos para a Home
           navigate("/home");
-          return; // Sai da função após o sucesso real
+          return;
+
         } else {
-          // Se o backend retornou 200, mas sem token, indica erro de implementação
-          throw new Error("Sucesso no login, mas token de autenticação não foi recebido.");
+          // Caso o backend retorne 200 OK, mas com uma mensagem de erro
+          setError(data.message || "O backend retornou um erro desconhecido.");
         }
       }
 
@@ -55,21 +58,13 @@ const Login = () => {
       setError(errorMessage);
 
     } catch (fetchError) {
-      // -------------------------------------------------------------------------
-      // 2. FALLBACK PARA LOGIN PROVISÓRIO (AQUI OCORRE EM CASO DE ERRO DE REDE/CORS)
-      // -------------------------------------------------------------------------
-      console.warn("Falha na conexão com a API de Login. Usando credenciais provisórias.");
+      // O "fallback" foi removido.
+      // Este 'catch' agora só trata erros de rede (ex: API offline ou CORS)
+      console.error("Erro de conexão com a API:", fetchError);
+      setError("Não foi possível conectar ao servidor. Verifique a rede ou o CORS.");
 
-      if (cpf === FALLBACK_CPF && password === FALLBACK_PASSWORD) {
-        // Simula o login bem-sucedido e salva um token fictício
-        localStorage.setItem("authToken", "simulated_token_for_dev_12345");
-        navigate("/home");
-      } else {
-        // Se as credenciais provisórias falharem
-        setError("Não foi possível conectar ao servidor. As credenciais provisórias falharam.");
-      }
     } finally {
-      setIsLoading(false); // Finaliza o estado de carregamento
+      setIsLoading(false);
     }
   };
 
@@ -93,10 +88,6 @@ const Login = () => {
           <p className="text-[#666] text-sm mb-8">
             Conecte-se com uma conta
           </p>
-          {/* Mensagem de alerta sobre o modo provisório */}
-          <p className="text-xs text-yellow-600 mb-4 p-2 bg-yellow-100 rounded">
-            Modo DEV: CPF: **{FALLBACK_CPF}** | Senha: **{FALLBACK_PASSWORD}**
-          </p>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
@@ -115,7 +106,7 @@ const Login = () => {
               <input
                 type="password"
                 placeholder="Senha"
-                value={password}
+                value={pass}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full h-12 px-4 bg-[#F6F6F6] border border-gray-200 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-[#1650A7]"
                 required

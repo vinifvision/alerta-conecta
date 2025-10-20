@@ -20,7 +20,7 @@ const Sidebar = () => {
     { to: "/audit", icon: <FileText className="w-6 h-6" />, label: "Auditoria e Logs" },
   ];
 
-  return ( 
+  return (
     <TooltipProvider>
       <nav className="w-[115px] h-screen relative shrink-0 bg-[#1650A7] ml-[33px] my-[30px] rounded-[31px] flex flex-col items-center py-8">
         <div className="mb-8">
@@ -41,11 +41,10 @@ const Sidebar = () => {
                 <TooltipTrigger asChild>
                   <Link
                     to={item.to}
-                    className={`w-[55px] h-[55px] flex items-center justify-center rounded-[12px] transition-all ${
-                      active
-                        ? "bg-[rgba(255,255,255,0.25)]"
-                        : "hover:bg-[rgba(255,255,255,0.15)]"
-                    }`}
+                    className={`w-[55px] h-[55px] flex items-center justify-center rounded-[12px] transition-all ${active
+                      ? "bg-[rgba(255,255,255,0.25)]"
+                      : "hover:bg-[rgba(255,255,255,0.15)]"
+                      }`}
                     aria-label={item.label}
                   >
                     <span className="text-white">{item.icon}</span>
@@ -60,22 +59,24 @@ const Sidebar = () => {
         </div>
 
         <div className="mt-auto mb-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                className="w-[55px] h-[55px] flex items-center justify-center rounded-[12px] hover:bg-[rgba(255,255,255,0.15)]"
-                aria-label="Configurações"
-              >
-                <Settings className="w-6 h-6 text-white" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="bg-black text-white text-xs rounded-md py-1 px-2">
-              Configurações
-            </TooltipContent>
-          </Tooltip>
+          <Link to="/profile" className="flex items-center gap-4 max-md:self-end">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className="w-[55px] h-[55px] flex items-center justify-center rounded-[12px] hover:bg-[rgba(255,255,255,0.15)]"
+                  aria-label="Configurações"
+                >
+                  <Settings className="w-6 h-6 text-white" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="bg-black text-white text-xs rounded-md py-1 px-2">
+                Configurações
+              </TooltipContent>
+            </Tooltip>
+          </Link>
         </div>
       </nav>
-    </TooltipProvider>
+    </TooltipProvider >
   );
 };
 

@@ -28,7 +28,7 @@ type HomeFilterOptionsData = { periods: FilterOption[]; types: FilterOption[]; }
 type HomeFilterState = { period: string; type: string; };
 
 // const API_URL = import.meta.env.VITE_API_URL || "";
-const GET_OCCURRENCES_URL = `${API_URL}/occurrence/getall`;
+const GET_OCCURRENCES_URL = `http://26.9.167.9:3308/database/occurrence/getall`;
 
 const Home = () => {
   // --- Hooks ---

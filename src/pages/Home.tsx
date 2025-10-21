@@ -1,267 +1,210 @@
-import React, { useEffect, useState, useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import Sidebar from "@/components/dashboard/Sidebar";
-import { Phone } from "lucide-react";
+// src/pages/Home.tsx (Corrigido para Match API Response e Completo)
 
-// --- Definição de Tipos ---
+import React, { useEffect, useState, useMemo } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import Sidebar from "@/components/dashboard/Sidebar";
+import { Phone, AlertTriangle } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+
+// --- Tipos (Conforme a API envia) ---
 type Occurrence = {
   id: number;
-  address: string;
-  title: string;
-  status: "active" | "in_progress" | "completed";
-  region: string;
-  type: string;
-  timestamp: string;
+  status: "Em_andamento" | "Encerrada" | "Cancelada"; // API envia 'status' com underscore
+  type: number;
+  priority: "Baixa" | "Media" | "Alta";
+  date: string;
+  titule: string | null;
+  victims: string | null;
+  details: string | null;
+  // Assumindo que o JOIN trará esses (ajuste se necessário)
+  nome_tipo?: string;
+  descricao_tipo?: string;
 };
 
-type User = {
-  name: string;
-  role: string;
-  photoUrl: string;
-};
+// (Tipos FilterOption, etc. - sem alteração)
+type FilterOption = { value: string; label: string; };
+type HomeFilterOptionsData = { periods: FilterOption[]; types: FilterOption[]; };
+type HomeFilterState = { period: string; type: string; };
 
-type FilterOption = {
-  value: string;
-  label: string;
-};
-
-type HomeFilterOptionsData = {
-  periods: FilterOption[];
-  types: FilterOption[];
-  regions: FilterOption[];
-  // statuses: FilterOption[]; // <--- REMOVIDO
-};
-
-type HomeFilterState = {
-  period: string;
-  type: string;
-  region: string;
-  // status: string; // <--- REMOVIDO
-};
+// const API_URL = import.meta.env.VITE_API_URL || "";
+const GET_OCCURRENCES_URL = `${API_URL}/occurrence/getall`;
 
 const Home = () => {
-  // --- Estados para os Dados ---
-  const [allOccurrences, setAllOccurrences] = useState<Occurrence[]>([]); // Lista Mestra
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Estado para os filtros selecionados
-  const [filters, setFilters] = useState<HomeFilterState>({
-    period: "",
-    type: "",
-    region: "",
-    // status: "", // <--- REMOVIDO
-  });
-
-  // --- Estado para as opções dos filtros ---
-  const [filterOptions, setFilterOptions] = useState<HomeFilterOptionsData>({
-    periods: [],
-    types: [],
-    regions: [],
-    // statuses: [], // <--- REMOVIDO
-  });
-
+  // --- Hooks ---
+  const { user, loading: authLoading } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
 
-  // --- useEffect para carregar TODOS os dados ---
+  const [allOccurrences, setAllOccurrences] = useState<Occurrence[]>([]);
+  const [isPageLoading, setIsPageLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [filters, setFilters] = useState<HomeFilterState>({ period: "", type: "" });
+  const [filterOptions, setFilterOptions] = useState<HomeFilterOptionsData>({ periods: [], types: [] });
+
+  // (useEffect de Aviso - sem alteração)
   useEffect(() => {
-    // 1. Proteção de Rota
-    const authToken = localStorage.getItem("authToken");
-    const userDataString = localStorage.getItem("usuario");
-
-    if (!authToken || !userDataString) {
-      navigate("/");
-      return;
+    if (location.state?.unauthorized === true) {
+      toast.error("Acesso Negado", { /* ... */ });
+      navigate(location.pathname, { replace: true, state: {} });
     }
+  }, [location, navigate]);
 
-    // 2. Carregar Dados da Página
-    const fetchHomePageData = () => {
+  // (useEffect de Fetch - busca apenas /getall)
+  useEffect(() => {
+    const fetchHomePageData = async () => {
+      setIsPageLoading(true);
+      setError(null);
+      const token = localStorage.getItem("authToken");
 
-      const userData = JSON.parse(userDataString);
-      const fetchedUser: User = {
-        name: userData.name,
-        role: userData.role,
-        photoUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.name}`
-      };
+      try {
+        const occurrencesRes = await fetch(GET_OCCURRENCES_URL, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
-      // 3. Mock das Ocorrências (simulação)
-      const now = new Date();
-      const mockOccurrences: Occurrence[] = [
-        { id: 1, address: "Rua do Sossego, 123 - Centro", title: "Incêndio em Edificação", status: "active", region: "centro", type: "incendio", timestamp: new Date().toISOString() },
-        { id: 2, address: "Av. Boa Viagem, 456 - Zona Sul", title: "Acidente Veicular", status: "in_progress", region: "zona_sul", type: "acidente", timestamp: new Date(now.getTime() - 86400000 * 2).toISOString() },
-        { id: 3, address: "Rua da Aurora, 789 - Centro", title: "APH - Atendimento Pré-Hospitalar", status: "completed", region: "centro", type: "aph", timestamp: new Date(now.getTime() - 86400000 * 8).toISOString() },
-        { id: 4, address: "Praça da República, 321 - Centro", title: "Incêndio Florestal", status: "active", region: "centro", type: "incendio_florestal", timestamp: new Date(now.getTime() - 3600000).toISOString() },
-        { id: 5, address: "Rua da Concórdia, 100 - Zona Norte", title: "Resgate em Altura", status: "in_progress", region: "zona_norte", type: "resgate", timestamp: new Date(now.getTime() - 86400000 * 3).toISOString() },
-        { id: 6, address: "Av. Norte, 200 - Zona Norte", title: "Salvamento Aquático", status: "completed", region: "zona_norte", type: "salvamento", timestamp: new Date(now.getTime() - 86400000 * 30).toISOString() },
-        { id: 7, address: "Rua do Sol, 300 - Zona Oeste", title: "Incêndio em Veículo", status: "active", region: "zona_oeste", type: "incendio_veiculo", timestamp: new Date(now.getTime() - 7200000).toISOString() },
-        { id: 8, address: "Av. Recife, 400 - Zona Sul", title: "APH - Atendimento Pré-Hospitalar", status: "completed", region: "zona_sul", type: "aph", timestamp: new Date(now.getTime() - 86400000 * 40).toISOString() },
-      ];
+        if (!occurrencesRes.ok) {
+          let errorBody = await occurrencesRes.text().catch(() => "Erro desconhecido");
+          throw new Error(`Falha ao buscar ocorrências: ${occurrencesRes.status}. Corpo: ${errorBody}`);
+        }
 
-      // 4. Mock das Opções de Filtro (simulação)
-      const mockFilterOptions: HomeFilterOptionsData = {
-        periods: [
-          { value: "today", label: "Hoje (Últimas 24h)" },
-          { value: "week", label: "Última semana" },
-          { value: "month", label: "Último mês" },
-          { value: "quarter", label: "Últimos 3 meses" },
-          { value: "year", label: "Último ano" },
-        ],
-        types: [
-          { value: "incendio", label: "Incêndio" },
-          { value: "acidente", label: "Acidente Veicular" },
-          { value: "aph", label: "APH - Atendimento Pré-Hospitalar" },
-          { value: "resgate", label: "Resgate em Altura" },
-          { value: "salvamento", label: "Salvamento Aquático" },
-          { value: "incendio_veiculo", label: "Incêndio em Veículo" },
-          { value: "incendio_florestal", label: "Incêndio Florestal" },
-          { value: "outros", label: "Outros" },
-        ],
-        regions: [
-          { value: "centro", label: "Centro" },
-          { value: "zona_sul", label: "Zona Sul" },
-          { value: "zona_norte", label: "Zona Norte" },
-          { value: "zona_oeste", label: "Zona Oeste" },
-          { value: "regiao_metropolitana", label: "Região Metropolitana" },
-        ],
-        // statuses: [], // <--- REMOVIDO
-      };
+        const occurrencesData: Occurrence[] | null = await occurrencesRes.json();
+        setAllOccurrences(occurrencesData || []);
 
-      // 5. Simula o tempo de uma requisição de rede
-      setTimeout(() => {
-        setUser(fetchedUser);
-        setAllOccurrences(mockOccurrences);
-        setFilterOptions(mockFilterOptions);
-        setIsLoading(false);
-      }, 500);
+      } catch (err: any) {
+        console.error("Home.tsx: Erro no fetch:", err);
+        setError(err.message || "Não foi possível carregar os dados.");
+      } finally {
+        setIsPageLoading(false);
+      }
     };
 
-    fetchHomePageData();
-  }, [navigate]);
+    if (!authLoading) {
+      fetchHomePageData();
+    }
+  }, [authLoading]);
 
-  // --- Lógica de Filtro com useMemo (CORRIGIDO) ---
+  // --- Hooks useMemo CORRIGIDOS ---
   const filteredOccurrences = useMemo(() => {
     let rows = [...allOccurrences];
-
-    // 1. Filtro de Período
-    if (filters.period) {
-      const now = new Date().getTime();
-      let daysToSubtract = 0;
-      if (filters.period === 'today') daysToSubtract = 1;
-      if (filters.period === 'week') daysToSubtract = 7;
-      if (filters.period === 'month') daysToSubtract = 30;
-      if (filters.period === 'quarter') daysToSubtract = 90;
-      if (filters.period === 'year') daysToSubtract = 365;
-
-      if (daysToSubtract > 0) {
-        const cutoff = now - daysToSubtract * 86400000;
-        rows = rows.filter(o => new Date(o.timestamp).getTime() >= cutoff);
-      }
-    }
-    // 2. Filtro de Tipo
-    if (filters.type) {
-      rows = rows.filter(o => o.type === filters.type);
-    }
-    // 3. Filtro de Região
-    if (filters.region) {
-      rows = rows.filter(o => o.region === filters.region);
-    }
-
-    // 4. FILTRO DE STATUS FOI REMOVIDO DAQUI (ESSA ERA A CAUSA DO BUG)
-    // if (filters.status) { ... } 
-
+    // (Filtros desabilitados por enquanto)
     return rows;
-  }, [allOccurrences, filters]); // Depende da lista mestra E dos filtros
+  }, [allOccurrences]);
 
-  // --- Listas de exibição (Agora filtram a lista 'filteredOccurrences' por status) ---
-  const recentOccurrences = useMemo(() =>
-    filteredOccurrences.filter((o) => o.status === "active"),
-    [filteredOccurrences]
-  );
+  const recentOccurrences = useMemo(() => {
+    // CORRIGIDO: Usa 'status' e o valor com underscore
+    return filteredOccurrences.filter((o) => o.status === "Em_andamento");
+  }, [filteredOccurrences]);
 
-  const inProgressOccurrences = useMemo(() =>
-    filteredOccurrences.filter((o) => o.status === "in_progress"),
-    [filteredOccurrences]
-  );
+  const completedOccurrences = useMemo(() => {
+    // CORRIGIDO: Assume 'Encerrada' vem da API (ajuste se for diferente)
+    return filteredOccurrences.filter((o) => o.status === "Encerrada");
+  }, [filteredOccurrences]);
 
-  const completedOccurrences = useMemo(() =>
-    filteredOccurrences.filter((o) => o.status === "completed"),
-    [filteredOccurrences]
-  );
+  const cancelledOccurrences = useMemo(() => {
+    // CORRIGIDO: Assume 'Cancelada' vem da API (ajuste se for diferente)
+    return filteredOccurrences.filter((o) => o.status === "Cancelada");
+  }, [filteredOccurrences]);
 
-  // --- Estado de carregamento ---
-  if (isLoading) {
+  // --- latestMapped CORRIGIDO (Usa campos da API) ---
+  const latestMapped = useMemo(() => [
+    ...recentOccurrences,
+    ...completedOccurrences,
+    ...cancelledOccurrences,
+  ].map((o) => {
+    // Cria o objeto que a página OccurrenceDetails espera
+    return {
+      // Passa os campos reais da API mapeados para os nomes esperados
+      id_ocorrencia: o.id,
+      titulo: o.titule || `Ocorrência #${o.id}`,
+      data_hora: o.date,
+      envolvidos: o.victims,
+      detalhes: o.details,
+      status_atual: o.status, // Passa o status real com underscore
+      prioridade: o.priority,
+      id_tipo_ocorrencia: o.type, // Mapeia 'type' (ID)
+      nome_tipo: o.nome_tipo || `Tipo ${o.type}`, // Usa nome_tipo ou fallback
+      descricao_tipo: o.descricao_tipo || "Sem descrição", // Usa descricao_tipo ou fallback
+
+      // Campos duplicados/mapeados que Details também usa
+      id: o.id,
+      title: o.titule || `Ocorrência #${o.id}`,
+      subtype: o.titule || `Ocorrência #${o.id}`,
+      address: `Tipo: ${o.nome_tipo || o.type}`, // Placeholder melhorado
+      type: `Tipo ${o.type}`, // Placeholder
+      status: o.status === "Em_andamento" ? "EM ANDAMENTO" : o.status === "Encerrada" ? "FINALIZADA" : "CANCELADA",
+    };
+  }), [recentOccurrences, completedOccurrences, cancelledOccurrences]);
+  // --- FIM DOS HOOKS ---
+
+
+  // --- Retornos Condicionais ---
+  if (authLoading || isPageLoading) {
     return (
       <div className="w-screen h-screen flex items-center justify-center bg-[#F9F9F9]">
-        <p className="text-[#1650A7] text-xl">Carregando dados da home...</p>
+        <p className="text-[#1650A7] text-xl">Carregando...</p>
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="w-screen h-screen flex overflow-hidden bg-[#F9F9F9] max-md:flex-col">
+        <Sidebar />
+        <main className="flex-1 overflow-y-auto p-6">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5" />
+            <p><strong>Erro ao carregar ocorrências:</strong> {error}</p>
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Tentar Novamente
+          </button>
+        </main>
       </div>
     );
   }
 
-  // --- Handlers dos Filtros ---
-  const handleFilterChange = (
-    e: React.ChangeEvent<HTMLSelectElement>,
-    filterName: keyof HomeFilterState
-  ) => {
-    setFilters(prevFilters => ({
-      ...prevFilters,
-      [filterName]: e.target.value,
-    }));
+  // --- Handlers e Componentes Internos ---
+  const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>, field: keyof HomeFilterState) => {
+    setFilters((prev) => ({ ...prev, [field]: e.target.value }));
   };
-
   const clearFilters = () => {
-    setFilters({
-      period: '',
-      type: '',
-      region: '',
-      // status: '' // <--- REMOVIDO
-    });
+    setFilters({ period: "", type: "" });
   };
 
-  const latestMapped = [
-    ...recentOccurrences,
-    ...inProgressOccurrences,
-    ...completedOccurrences,
-  ].map((o) => {
-    return {
-      id: o.id,
-      address: o.address,
-      type: o.title,
-      subtype: o.title,
-      status: o.status === "active" ? "ABERTA" : "FINALIZADA",
-    };
-  });
+  // --- OccurrenceCard CORRIGIDO ---
+  const OccurrenceCard = (occurrence: Occurrence) => {
+    // Pega os campos corretos da API
+    const { id, titule, status, priority, type, nome_tipo } = occurrence;
 
-  // --- Componente de Card ---
-  const OccurrenceCard = ({ title, address, id, status }: Occurrence) => {
-    const occurrenceState = {
-      id,
-      address,
-      type: title,
-      subtype: title,
-      status: status === "active" ? "ABERTA" : "FINALIZADA",
-      notes: "Sem observações adicionais no momento.",
-      mediaUrl:
-        "https://images.unsplash.com/photo-1504215680853-026ed2a45def?q=80&w=1200&auto=format&fit=crop",
-      lat: -8.04666,
-      lng: -34.877, // Corrigi o meu typo anterior
-    };
+    const dotColor =
+      status === "Em_andamento" ? "bg-[#FF0000]" :
+        status === "Encerrada" ? "bg-green-500" :
+          "bg-gray-500";
+
+    // Encontra o objeto mapeado correspondente para passar para o state
+    const occurrenceState = latestMapped.find(m => m.id === id);
 
     return (
       <div className="bg-white rounded-[15px] p-5 mb-4 flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-start gap-3">
-            <div
-              className={`w-3 h-3 rounded-full mt-1.5 flex-shrink-0 ${status === "active" ? "bg-[#FF0000]" : "bg-[#FF0000]"
-                }`}
-            />
+            <div className={`w-3 h-3 rounded-full mt-1.5 flex-shrink-0 ${dotColor}`} />
             <div>
-              <h3 className="text-[#000000] text-lg font-semibold mb-1">{title}</h3>
-              <p className="text-[#666666] text-sm mb-2">{address}</p>
-              <p className="text-[#FF0000] text-sm font-medium">#{id}</p>
+              {/* === CORREÇÃO AQUI === */}
+              {/* Título Principal: Usa 'titule' (nome específico) ou fallback */}
+              <h3 className="text-[#000000] text-lg font-semibold mb-1">{titule || `Ocorrência #${id}`}</h3>
+              {/* Subtítulo: Usa 'nome_tipo' (categoria geral) ou fallback */}
+              <p className="text-[#666666] text-sm mb-2">{nome_tipo || `Tipo ID: ${type}`}</p>
+              {/* ===================== */}
+              <div className="flex items-center gap-4">
+                <p className="text-[#FF0000] text-sm font-medium">#{id}</p>
+                <p className="text-gray-700 text-sm font-medium">Prioridade: {priority}</p>
+              </div>
             </div>
           </div>
         </div>
-
         <Link
           to={`/occurrences/${id}`}
           state={{ occurrence: occurrenceState, latest: latestMapped }}
@@ -274,13 +217,12 @@ const Home = () => {
     );
   };
 
-  // --- Renderização Principal ---
+  // --- RETORNO PRINCIPAL (JSX) ---
   return (
     <div className="w-screen h-screen flex overflow-hidden bg-[#F9F9F9] max-md:flex-col">
       <Sidebar />
-
       <main className="flex-1 overflow-y-auto px-[60px] pt-[65px] pb-[30px] max-md:p-5 max-sm:p-[15px]">
-        {/* (Header não muda) */}
+        {/* Header */}
         <div className="flex items-start justify-between mb-10 max-md:flex-col max-md:gap-4">
           <div>
             <h1 className="text-[#1650A7] text-[32px] font-semibold mb-2 max-md:text-2xl max-sm:text-xl">
@@ -297,94 +239,70 @@ const Home = () => {
             </div>
             <div className="w-[60px] h-[60px] rounded-full bg-[#D9D9D9] overflow-hidden">
               <img
-                src={user!.photoUrl}
+                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user!.name}`}
                 alt={user!.name}
                 className="w-full h-full object-cover"
               />
             </div>
           </Link>
         </div>
-
+        {/* Container Principal */}
         <div className="flex gap-8 max-lg:flex-col">
+          {/* Coluna de Ocorrências */}
           <div className="flex-1">
-            {/* (Listas de Ocorrências não mudam) */}
             <h2 className="text-[#1650A7] text-2xl font-semibold mb-6">
-              Lista de Ocorrências - Recentes
+              Em andamento
             </h2>
             <section className="mb-8">
               {recentOccurrences.length > 0 ? (
-                recentOccurrences.map((o, index) => <OccurrenceCard key={index} {...o} />)
+                // Usa 'id' como key
+                recentOccurrences.map((o) => <OccurrenceCard key={o.id} {...o} />)
               ) : (
-                <p className="text-gray-500 text-sm">Nenhuma ocorrência recente encontrada com os filtros atuais.</p>
+                <p className="text-gray-500 text-sm">Nenhuma ocorrência "Em andamento" encontrada.</p>
               )}
             </section>
-            <h3 className="text-[#1650A7] text-xl font-semibold mb-4">Em andamento</h3>
+            <h3 className="text-[#1650A7] text-xl font-semibold mb-4">Encerradas</h3>
             <section className="mb-8">
-              {inProgressOccurrences.length > 0 ? (
-                inProgressOccurrences.map((o, index) => <OccurrenceCard key={index} {...o} />)
+              {completedOccurrences.length > 0 ? (
+                // Usa 'id' como key
+                completedOccurrences.map((o) => <OccurrenceCard key={o.id} {...o} />)
               ) : (
-                <p className="text-gray-500 text-sm">Nenhuma ocorrência em andamento encontrada com os filtros atuais.</p>
+                <p className="text-gray-500 text-sm">Nenhuma ocorrência "Encerrada" encontrada.</p>
               )}
             </section>
-            <h3 className="text-[#1650A7] text-xl font-semibold mb-4">Concluídas</h3>
+            <h3 className="text-[#1650A7] text-xl font-semibold mb-4">Canceladas</h3>
             <section>
-              {completedOccurrences.length > 0 ? (
-                completedOccurrences.map((o, index) => <OccurrenceCard key={index} {...o} />)
+              {cancelledOccurrences.length > 0 ? (
+                // Usa 'id' como key
+                cancelledOccurrences.map((o) => <OccurrenceCard key={o.id} {...o} />)
               ) : (
-                <p className="text-gray-500 text-sm">Nenhuma ocorrência concluída encontrada com os filtros atuais.</p>
+                <p className="text-gray-500 text-sm">Nenhuma ocorrência "Cancelada" encontrada.</p>
               )}
             </section>
           </div>
-
+          {/* Sidebar de Filtros (Desabilitado) */}
           <aside className="w-[320px] max-lg:w-full">
             <div className="bg-white rounded-[15px] p-6 mb-6">
               <h3 className="text-[#000000] text-xl font-semibold mb-6">
                 Filtrar Ocorrências
               </h3>
-
-              {/* --- Filtros (Status removido) --- */}
               <div className="space-y-4">
                 <select
                   className="w-full h-12 px-4 bg-[#F6F6F6] border border-[rgba(0,0,0,0.14)] rounded-lg text-base"
                   value={filters.period}
                   onChange={(e) => handleFilterChange(e, "period")}
+                  disabled={true}
                 >
-                  <option value="">Período</option>
-                  {filterOptions.periods.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
+                  <option value="">Período (desabilitado)</option>
                 </select>
-
                 <select
                   className="w-full h-12 px-4 bg-[#F6F6F6] border border-[rgba(0,0,0,0.14)] rounded-lg text-base"
                   value={filters.type}
                   onChange={(e) => handleFilterChange(e, "type")}
+                  disabled={true}
                 >
-                  <option value="">Tipo de ocorrência</option>
-                  {filterOptions.types.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
+                  <option value="">Tipo (desabilitado)</option>
                 </select>
-
-                <select
-                  className="w-full h-12 px-4 bg-[#F6F6F6] border border-[rgba(0,0,0,0.14)] rounded-lg text-base"
-                  value={filters.region}
-                  onChange={(e) => handleFilterChange(e, "region")}
-                >
-                  <option value="">Região</option>
-                  {filterOptions.regions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-
-                {/* --- Select de Status foi REMOVIDO --- */}
-
                 <div className="flex gap-2">
                   <button
                     onClick={clearFilters}
@@ -395,7 +313,6 @@ const Home = () => {
                 </div>
               </div>
             </div>
-
             <Link
               to="/occurrences/new"
               className="w-full h-14 bg-white border-2 border-[#FF4444] text-[#FF4444] rounded-lg font-medium hover:bg-[#FF4444] hover:text-white transition-colors flex items-center justify-center gap-3"

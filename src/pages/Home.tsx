@@ -1,4 +1,4 @@
-// src/pages/Home.tsx (Corrigido para Match API Response e Completo)
+// src/pages/Home.tsx (Corrigido para Match API Response e Completo - v2)
 
 import React, { useEffect, useState, useMemo } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
@@ -20,6 +20,17 @@ type Occurrence = {
   // Assumindo que o JOIN trará esses (ajuste se necessário)
   nome_tipo?: string;
   descricao_tipo?: string;
+};
+
+// Mapeamento dos tipos de ocorrência (baseado no RegisterOccurrence.tsx)
+const OCCURRENCE_TYPES: Record<number, string> = {
+  1: "Incêndio",
+  2: "Resgate",
+  3: "APH",
+  4: "Prevenção",
+  5: "Ocorrência Ambiental",
+  6: "Ocorrência Administrativa",
+  7: "Desastre Natural",
 };
 
 // (Tipos FilterOption, etc. - sem alteração)
@@ -63,16 +74,16 @@ const Home = () => {
         });
 
         if (!occurrencesRes.ok) {
-          let errorBody = await occurrencesRes.text().catch(() => "Erro desconhecido");
+          const errorBody = await occurrencesRes.text().catch(() => "Erro desconhecido");
           throw new Error(`Falha ao buscar ocorrências: ${occurrencesRes.status}. Corpo: ${errorBody}`);
         }
 
         const occurrencesData: Occurrence[] | null = await occurrencesRes.json();
         setAllOccurrences(occurrencesData || []);
 
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Home.tsx: Erro no fetch:", err);
-        setError(err.message || "Não foi possível carregar os dados.");
+        setError((err as Error).message || "Não foi possível carregar os dados.");
       } finally {
         setIsPageLoading(false);
       }
@@ -85,7 +96,7 @@ const Home = () => {
 
   // --- Hooks useMemo CORRIGIDOS ---
   const filteredOccurrences = useMemo(() => {
-    let rows = [...allOccurrences];
+    const rows = [...allOccurrences];
     // (Filtros desabilitados por enquanto)
     return rows;
   }, [allOccurrences]);
@@ -112,6 +123,8 @@ const Home = () => {
     ...cancelledOccurrences,
   ].map((o) => {
     // Cria o objeto que a página OccurrenceDetails espera
+    const typeName = OCCURRENCE_TYPES[o.type] || `Tipo ${o.type}`;
+
     return {
       // Passa os campos reais da API mapeados para os nomes esperados
       id_ocorrencia: o.id,
@@ -122,15 +135,15 @@ const Home = () => {
       status_atual: o.status, // Passa o status real com underscore
       prioridade: o.priority,
       id_tipo_ocorrencia: o.type, // Mapeia 'type' (ID)
-      nome_tipo: o.nome_tipo || `Tipo ${o.type}`, // Usa nome_tipo ou fallback
+      nome_tipo: typeName, // Usa o mapeamento correto
       descricao_tipo: o.descricao_tipo || "Sem descrição", // Usa descricao_tipo ou fallback
 
       // Campos duplicados/mapeados que Details também usa
       id: o.id,
       title: o.titule || `Ocorrência #${o.id}`,
       subtype: o.titule || `Ocorrência #${o.id}`,
-      address: `Tipo: ${o.nome_tipo || o.type}`, // Placeholder melhorado
-      type: `Tipo ${o.type}`, // Placeholder
+      address: `Tipo: ${typeName}`, // Placeholder melhorado
+      type: typeName, // Usa o nome correto do tipo
       status: o.status === "Em_andamento" ? "EM ANDAMENTO" : o.status === "Encerrada" ? "FINALIZADA" : "CANCELADA",
     };
   }), [recentOccurrences, completedOccurrences, cancelledOccurrences]);
@@ -187,20 +200,22 @@ const Home = () => {
     const occurrenceState = latestMapped.find(m => m.id === id);
 
     return (
-      <div className="bg-white rounded-[15px] p-5 mb-4 flex items-start justify-between">
+      <div className="bg-white rounded-[15px] p-4 sm:p-5 mb-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-0">
         <div className="flex-1">
           <div className="flex items-start gap-3">
             <div className={`w-3 h-3 rounded-full mt-1.5 flex-shrink-0 ${dotColor}`} />
-            <div>
+            <div className="min-w-0 flex-1">
               {/* === CORREÇÃO AQUI === */}
               {/* Título Principal: Usa 'titule' (nome específico) ou fallback */}
-              <h3 className="text-[#000000] text-lg font-semibold mb-1">{titule || `Ocorrência #${id}`}</h3>
-              {/* Subtítulo: Usa 'nome_tipo' (categoria geral) ou fallback */}
-              <p className="text-[#666666] text-sm mb-2">{nome_tipo || `Tipo ID: ${type}`}</p>
+              <h3 className="text-[#000000] text-base sm:text-lg font-semibold mb-1 break-words">{titule || `Ocorrência #${id}`}</h3>
+              {/* Subtítulo: CORRIGIDO - Usa o mapeamento correto do tipo */}
+              <p className="text-[#666666] text-xs sm:text-sm mb-2">
+                {OCCURRENCE_TYPES[Number(type)] || `Tipo ${type}`}
+              </p>
               {/* ===================== */}
-              <div className="flex items-center gap-4">
-                <p className="text-[#FF0000] text-sm font-medium">#{id}</p>
-                <p className="text-gray-700 text-sm font-medium">Prioridade: {priority}</p>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                <p className="text-[#FF0000] text-xs sm:text-sm font-medium">#{id}</p>
+                <p className="text-gray-700 text-xs sm:text-sm font-medium">Prioridade: {priority}</p>
               </div>
             </div>
           </div>
@@ -208,7 +223,7 @@ const Home = () => {
         <Link
           to={`/occurrences/${id}`}
           state={{ occurrence: occurrenceState, latest: latestMapped }}
-          className="text-[#1650A7] text-sm font-medium hover:underline"
+          className="text-[#1650A7] text-xs sm:text-sm font-medium hover:underline self-start sm:self-auto"
           title="Visualizar detalhes da ocorrência"
         >
           Visualizar
@@ -221,23 +236,23 @@ const Home = () => {
   return (
     <div className="w-screen h-screen flex overflow-hidden bg-[#F9F9F9] max-md:flex-col">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto px-[60px] pt-[65px] pb-[30px] max-md:p-5 max-sm:p-[15px]">
+      <main className="flex-1 overflow-y-auto px-4 sm:px-6 md:px-[60px] pt-4 sm:pt-6 md:pt-[65px] pb-4 sm:pb-6 md:pb-[30px]">
         {/* Header */}
-        <div className="flex items-start justify-between mb-10 max-md:flex-col max-md:gap-4">
-          <div>
-            <h1 className="text-[#1650A7] text-[32px] font-semibold mb-2 max-md:text-2xl max-sm:text-xl">
+        <div className="flex items-start justify-between mb-6 sm:mb-10 max-md:flex-col max-md:gap-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-[#1650A7] text-xl sm:text-2xl md:text-[32px] font-semibold mb-2 break-words">
               Olá, {user!.name},
             </h1>
-            <p className="text-[#1650A7] text-[32px] font-semibold max-md:text-2xl max-sm:text-xl">
+            <p className="text-[#1650A7] text-xl sm:text-2xl md:text-[32px] font-semibold break-words">
               Acompanhe suas ocorrências
             </p>
           </div>
-          <Link to="/profile" className="flex items-center gap-4 max-md:self-end">
-            <div className="text-right">
-              <p className="text-[#000000] text-base font-semibold">{user!.name}</p>
-              <p className="text-[#666666] text-sm">{user!.role}</p>
+          <Link to="/profile" className="flex items-center gap-3 sm:gap-4 max-md:self-end flex-shrink-0">
+            <div className="text-right hidden sm:block">
+              <p className="text-[#000000] text-sm sm:text-base font-semibold truncate max-w-[120px]">{user!.name}</p>
+              <p className="text-[#666666] text-xs sm:text-sm truncate max-w-[120px]">{user!.role}</p>
             </div>
-            <div className="w-[60px] h-[60px] rounded-full bg-[#D9D9D9] overflow-hidden">
+            <div className="w-[50px] h-[50px] sm:w-[60px] sm:h-[60px] rounded-full bg-[#D9D9D9] overflow-hidden flex-shrink-0">
               <img
                 src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user!.name}`}
                 alt={user!.name}
@@ -247,48 +262,48 @@ const Home = () => {
           </Link>
         </div>
         {/* Container Principal */}
-        <div className="flex gap-8 max-lg:flex-col">
+        <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8">
           {/* Coluna de Ocorrências */}
-          <div className="flex-1">
-            <h2 className="text-[#1650A7] text-2xl font-semibold mb-6">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-[#1650A7] text-lg sm:text-xl md:text-2xl font-semibold mb-4 sm:mb-6">
               Em andamento
             </h2>
-            <section className="mb-8">
+            <section className="mb-6 sm:mb-8">
               {recentOccurrences.length > 0 ? (
                 // Usa 'id' como key
                 recentOccurrences.map((o) => <OccurrenceCard key={o.id} {...o} />)
               ) : (
-                <p className="text-gray-500 text-sm">Nenhuma ocorrência "Em andamento" encontrada.</p>
+                <p className="text-gray-500 text-xs sm:text-sm">Nenhuma ocorrência "Em andamento" encontrada.</p>
               )}
             </section>
-            <h3 className="text-[#1650A7] text-xl font-semibold mb-4">Encerradas</h3>
-            <section className="mb-8">
+            <h3 className="text-[#1650A7] text-base sm:text-lg md:text-xl font-semibold mb-3 sm:mb-4">Encerradas</h3>
+            <section className="mb-6 sm:mb-8">
               {completedOccurrences.length > 0 ? (
                 // Usa 'id' como key
                 completedOccurrences.map((o) => <OccurrenceCard key={o.id} {...o} />)
               ) : (
-                <p className="text-gray-500 text-sm">Nenhuma ocorrência "Encerrada" encontrada.</p>
+                <p className="text-gray-500 text-xs sm:text-sm">Nenhuma ocorrência "Encerrada" encontrada.</p>
               )}
             </section>
-            <h3 className="text-[#1650A7] text-xl font-semibold mb-4">Canceladas</h3>
+            <h3 className="text-[#1650A7] text-base sm:text-lg md:text-xl font-semibold mb-3 sm:mb-4">Canceladas</h3>
             <section>
               {cancelledOccurrences.length > 0 ? (
                 // Usa 'id' como key
                 cancelledOccurrences.map((o) => <OccurrenceCard key={o.id} {...o} />)
               ) : (
-                <p className="text-gray-500 text-sm">Nenhuma ocorrência "Cancelada" encontrada.</p>
+                <p className="text-gray-500 text-xs sm:text-sm">Nenhuma ocorrência "Cancelada" encontrada.</p>
               )}
             </section>
           </div>
           {/* Sidebar de Filtros (Desabilitado) */}
-          <aside className="w-[320px] max-lg:w-full">
-            <div className="bg-white rounded-[15px] p-6 mb-6">
-              <h3 className="text-[#000000] text-xl font-semibold mb-6">
+          <aside className="w-full lg:w-[320px] lg:max-w-[320px]">
+            <div className="bg-white rounded-[15px] p-4 sm:p-6 mb-6">
+              <h3 className="text-[#000000] text-lg sm:text-xl font-semibold mb-4 sm:mb-6">
                 Filtrar Ocorrências
               </h3>
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 <select
-                  className="w-full h-12 px-4 bg-[#F6F6F6] border border-[rgba(0,0,0,0.14)] rounded-lg text-base"
+                  className="w-full h-10 sm:h-12 px-3 sm:px-4 bg-[#F6F6F6] border border-[rgba(0,0,0,0.14)] rounded-lg text-sm sm:text-base"
                   value={filters.period}
                   onChange={(e) => handleFilterChange(e, "period")}
                   disabled={true}
@@ -296,7 +311,7 @@ const Home = () => {
                   <option value="">Período (desabilitado)</option>
                 </select>
                 <select
-                  className="w-full h-12 px-4 bg-[#F6F6F6] border border-[rgba(0,0,0,0.14)] rounded-lg text-base"
+                  className="w-full h-10 sm:h-12 px-3 sm:px-4 bg-[#F6F6F6] border border-[rgba(0,0,0,0.14)] rounded-lg text-sm sm:text-base"
                   value={filters.type}
                   onChange={(e) => handleFilterChange(e, "type")}
                   disabled={true}
@@ -306,7 +321,7 @@ const Home = () => {
                 <div className="flex gap-2">
                   <button
                     onClick={clearFilters}
-                    className="flex-1 h-12 bg-gray-500 text-white rounded-lg font-medium hover:bg-gray-600 transition-colors"
+                    className="flex-1 h-10 sm:h-12 bg-gray-500 text-white rounded-lg font-medium hover:bg-gray-600 transition-colors text-sm sm:text-base"
                   >
                     Limpar Filtros
                   </button>
@@ -315,11 +330,12 @@ const Home = () => {
             </div>
             <Link
               to="/occurrences/new"
-              className="w-full h-14 bg-white border-2 border-[#FF4444] text-[#FF4444] rounded-lg font-medium hover:bg-[#FF4444] hover:text-white transition-colors flex items-center justify-center gap-3"
+              className="w-full h-12 sm:h-14 bg-white border-2 border-[#FF4444] text-[#FF4444] rounded-lg font-medium hover:bg-[#FF4444] hover:text-white transition-colors flex items-center justify-center gap-2 sm:gap-3 text-sm sm:text-base"
               title="Registrar nova ocorrência"
             >
-              <Phone className="w-5 h-5" />
-              Registrar ocorrência
+              <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="hidden sm:inline">Registrar ocorrência</span>
+              <span className="sm:hidden">Registrar</span>
             </Link>
           </aside>
         </div>

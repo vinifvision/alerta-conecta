@@ -4,6 +4,17 @@ import { Link, useLocation, useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, FileText, MapPin, AlertTriangle } from "lucide-react";
 import { useState, useEffect } from "react";
 
+// Mapeamento dos tipos de ocorrência (mesmo da Home)
+const OCCURRENCE_TYPES: Record<number, string> = {
+  1: "Incêndio",
+  2: "Resgate",
+  3: "APH",
+  4: "Prevenção",
+  5: "Ocorrência Ambiental",
+  6: "Ocorrência Administrativa",
+  7: "Desastre Natural",
+};
+
 // 1. TIPO ATUALIZADO (para bater com o objeto 'state.occurrence' enviado pela Home)
 type Occurrence = {
   // Campos reais da API mapeados para nomes que Details usava
@@ -96,25 +107,29 @@ export default function OccurrenceDetails() {
         const rawLatestData = latestRes.ok ? await latestRes.json() : [];
 
         // Mapeia os dados crus para o formato que o componente espera (igual ao latestMapped da Home)
-        const mapApiData = (o: any): Occurrence => ({
-          id_ocorrencia: o.id,
-          titulo: o.titule || `Ocorrência #${o.id}`,
-          data_hora: o.date,
-          envolvidos: o.victims,
-          detalhes: o.details,
-          status_atual: o.status,
-          prioridade: o.priority,
-          id_tipo_ocorrencia: o.type,
-          nome_tipo: o.nome_tipo || `Tipo ${o.type}`,
-          descricao_tipo: o.descricao_tipo || "Sem descrição",
-          id: o.id,
-          title: o.titule || `Ocorrência #${o.id}`,
-          subtype: o.titule || `Ocorrência #${o.id}`,
-          address: `Tipo: ${o.nome_tipo || o.type}`, // Placeholder
-          type: `Tipo ${o.type}`, // Placeholder
-          status: o.status === "Em_andamento" ? "EM ANDAMENTO" : o.status === "Encerrada" ? "FINALIZADA" : "CANCELADA",
-          // lat/lng precisam vir da API
-        });
+        const mapApiData = (o: Record<string, unknown>): Occurrence => {
+          const typeName = OCCURRENCE_TYPES[o.type as number] || `Tipo ${o.type}`;
+
+          return {
+            id_ocorrencia: o.id as number,
+            titulo: (o.titule as string) || `Ocorrência #${o.id}`,
+            data_hora: o.date as string,
+            envolvidos: o.victims as string | null,
+            detalhes: o.details as string | null,
+            status_atual: o.status as "Em_andamento" | "Encerrada" | "Cancelada",
+            prioridade: o.priority as "Baixa" | "Media" | "Alta",
+            id_tipo_ocorrencia: o.type as number,
+            nome_tipo: typeName,
+            descricao_tipo: (o.descricao_tipo as string) || "Sem descrição",
+            id: o.id as number,
+            title: (o.titule as string) || `Ocorrência #${o.id}`,
+            subtype: (o.titule as string) || `Ocorrência #${o.id}`,
+            address: `Tipo: ${typeName}`, // Placeholder melhorado
+            type: typeName, // Usa o nome correto do tipo
+            status: o.status === "Em_andamento" ? "EM ANDAMENTO" : o.status === "Encerrada" ? "FINALIZADA" : "CANCELADA",
+            // lat/lng precisam vir da API
+          };
+        };
 
         const occurrenceData: Occurrence = mapApiData(rawOccurrenceData);
         const latestMappedData: Occurrence[] = (rawLatestData || []).map(mapApiData);
@@ -122,9 +137,9 @@ export default function OccurrenceDetails() {
         setOccurrence(occurrenceData);
         setLatest(latestMappedData);
 
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Erro ao buscar dados da ocorrência (F5):", err);
-        setError(err.message || "Erro desconhecido ao buscar dados.");
+        setError((err as Error).message || "Erro desconhecido ao buscar dados.");
       } finally {
         setIsLoading(false);
       }
@@ -186,15 +201,28 @@ export default function OccurrenceDetails() {
               <span>{occurrence.address}</span>
             </div>
             <div className="rounded-lg overflow-hidden border">
-              <iframe /* Mapa usa lat/lng */ />
+              <iframe
+                src={`https://www.google.com/maps/embed/v1/view?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dOWWgU6xU4Y&center=${lat},${lng}&zoom=15`}
+                width="100%"
+                height="300"
+                style={{ border: 0 }}
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
             </div>
           </section>
 
           <section className="mt-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="p-4 rounded-lg border">
               <p className="text-xs text-muted-foreground">Tipo de ocorrência</p>
-              {/* Usa nome_tipo */}
-              <p className="font-medium mt-1">{occurrence.nome_tipo}</p>
+              {/* Usa o mapeamento correto */}
+              <p className="font-medium mt-1">
+                {(() => {
+                  const typeId = Number(occurrence.id_tipo_ocorrencia);
+                  return OCCURRENCE_TYPES[typeId] || `Tipo ${typeId}`;
+                })()}
+              </p>
             </div>
             <div className="p-4 rounded-lg border">
               <p className="text-xs text-muted-foreground">Envolvidos</p>
@@ -208,10 +236,20 @@ export default function OccurrenceDetails() {
             </div>
             <div className="p-4 rounded-lg border">
               <p className="text-xs text-muted-foreground">Data e hora</p>
-              {/* Usa data_hora */}
+              {/* Usa data_hora com formatação correta */}
               <p className="font-medium mt-1">
-                {new Date(occurrence.data_hora).toLocaleDateString()} •{" "}
-                {new Date(occurrence.data_hora).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                {(() => {
+                  try {
+                    const date = new Date(occurrence.data_hora);
+                    if (isNaN(date.getTime())) {
+                      return occurrence.data_hora; // Se não conseguir fazer parse, mostra o valor original
+                    }
+                    return date.toLocaleDateString('pt-BR') + ' • ' +
+                      date.toLocaleTimeString('pt-BR', { hour: "2-digit", minute: "2-digit" });
+                  } catch (error) {
+                    return occurrence.data_hora; // Fallback para o valor original
+                  }
+                })()}
               </p>
             </div>
           </section>

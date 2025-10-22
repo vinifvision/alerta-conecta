@@ -27,7 +27,7 @@ type FormData = {
   id_bairro: string;
 };
 
-const REGISTER_OCCURRENCE_URL = `http://26.9.167.9:3308/database/occurrence/registry`;
+const REGISTER_OCCURRENCE_URL = `https://alerta-conecta-backend-production.up.railway.app/database/occurrence/registry`;
 
 const MOCK_FORM_OPTIONS: FormOptionsData = {
   types: [

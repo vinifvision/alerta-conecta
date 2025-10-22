@@ -37,7 +37,7 @@ type LocationState = {
   latest?: Occurrence[]; // A lista 'latest' agora também contém objetos Occurrence mapeados
 };
 
-// const API_URL = import.meta.env.VITE_API_URL || "";
+const API_URL = import.meta.env.VITE_API_URL || "https://alerta-conecta-backend-production.up.railway.app/";
 
 export default function OccurrenceDetails() {
   const { id } = useParams(); // Pega o ID da URL (que é o 'id' simples)

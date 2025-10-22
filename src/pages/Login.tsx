@@ -5,7 +5,7 @@ import React, { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 
 // 2. A URL DA API AGORA É GERENCIADA PELO 'AuthContext'
- const LOGIN_API_URL = "http://26.9.167.9:3308/database/user/login";
+const LOGIN_API_URL = "https://alerta-conecta-backend-production.up.railway.app/database/user/login";
 
 const Login = () => {
   // 3. PEGAR A FUNÇÃO DE LOGIN DO CONTEXTO
